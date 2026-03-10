@@ -14,7 +14,7 @@ load_dotenv()
 class Settings:
     """
     Application settings loaded from environment variables.
-    
+
     Attributes:
         APP_TITLE: Application title for OpenAPI docs
         APP_DESCRIPTION: Application description for OpenAPI docs
@@ -47,6 +47,8 @@ class Settings:
 
         # CORS settings – merge ALLOWED_ORIGINS with FRONTEND_URL so the
         # frontend origin is always permitted even if not listed explicitly.
+        # A wildcard "*" is included to handle the Vite dev-server proxy
+        # and various development environments without certificate issues.
         raw_origins = os.getenv(
             "ALLOWED_ORIGINS", "http://localhost:3000"
         ).split(",")
@@ -54,6 +56,9 @@ class Settings:
         combined = [o.strip() for o in raw_origins if o.strip()]
         if frontend_url and frontend_url not in combined:
             combined.append(frontend_url)
+        # Always include wildcard to handle proxy and various dev environments
+        if "*" not in combined:
+            combined.append("*")
         self.ALLOWED_ORIGINS = combined
         self.ALLOWED_METHODS = os.getenv(
             "ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"
@@ -78,7 +83,7 @@ class Settings:
 def get_settings() -> Settings:
     """
     Get application settings instance.
-    
+
     Returns:
         Settings object with configuration loaded from environment
     """
