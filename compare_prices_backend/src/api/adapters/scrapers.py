@@ -1,6 +1,13 @@
 """
 Store scrapers implementation for all 8 Indian game stores, registry-dispatch pattern.
 
+MAINTAINER NOTE (2024-06): Store DOM/HTML structures may change at any time.
+If real-time scraping yields zero results, always check:
+- The product selector(s) for each store may be out of date.
+- Use browser "Inspect Element" to confirm the current product-list container and details.
+- Add/update selectors as needed.
+- Always log a snippet of raw HTML and the URL in zero-result scrapes for easy debugging.
+
 Each store's scraper is a class inheriting from BaseStoreAdapter. All parsing
 uses Playwright browser-based rendering for robust scraping.
 
@@ -52,11 +59,16 @@ class GamesTheShopAdapter(BaseStoreAdapter):
         search_url = self.search_template.format(query=query.replace(" ", "+"))
         html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
+            logger.warning("GamesTheShopAdapter: No HTML returned for store=%s url=%s", self.store_name, search_url)
             return []
         soup = BeautifulSoup(html, "lxml")
         results = []
-        # Games appear in div.product-list, each li
-        for prod_li in soup.select('ul.product-list > li'):
+        product_items = soup.select('ul.product-list > li')
+        if not product_items:
+            logger.warning("GamesTheShopAdapter: No products found for query='%s' url=%s; HTML length=%d. HTML excerpt:\n%s",
+                query, search_url, len(html), html[:1000] if html else "None")
+        # NOTE: If store HTML has changed (no 'ul.product-list > li'), update selectors here:
+        for prod_li in product_items:
             try:
                 title = prod_li.select_one('.product-title').get_text(strip=True)
                 url = self.base_url + prod_li.select_one("a")["href"]
@@ -164,11 +176,17 @@ class AmazonIndiaAdapter(BaseStoreAdapter):
         search_url = self.search_template.format(query=query.replace(" ", "+"))
         html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
+            logger.warning("AmazonIndiaAdapter: No HTML returned for store=%s url=%s", self.store_name, search_url)
             return []
 
         soup = BeautifulSoup(html, "lxml")
         results = []
-        for item in soup.select(".s-result-item[data-component-type='s-search-result']"):
+        items = soup.select(".s-result-item[data-component-type='s-search-result']")
+        if not items:
+            logger.warning("AmazonIndiaAdapter: No products parsed for query='%s' url=%s; HTML length=%d. HTML snippet:\n%s",
+                query, search_url, len(html), html[:1000] if html else "None")
+        # NOTE: If Amazon search DOM changes, update selector ".s-result-item[data-component-type='s-search-result']"
+        for item in items:
             try:
                 link_tag = item.select_one('h2 a')
                 url = self.base_url + link_tag.get('href')
