@@ -65,11 +65,14 @@ app = FastAPI(
     },
 )
 
-# Configure CORS middleware using environment settings
+# Configure CORS middleware using environment settings.
+# allow_credentials is False because the API does not use cookies or
+# HTTP-auth.  Setting it to True while the origin list may contain a
+# wildcard causes browsers to reject the response (CORS spec violation).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=settings.ALLOWED_METHODS,
     allow_headers=settings.ALLOWED_HEADERS,
     max_age=settings.CORS_MAX_AGE,

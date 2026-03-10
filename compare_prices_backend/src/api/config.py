@@ -28,7 +28,6 @@ class Settings:
         NODE_ENV: Environment mode (development/production)
         LOG_LEVEL: Logging level
         REQUEST_TIMEOUT_MS: Request timeout in milliseconds
-        # Firecrawl settings (for future integration)
         FIRECRAWL_API_KEY: API key for Firecrawl service
         FIRECRAWL_ENABLED: Whether to use Firecrawl for real scraping
     """
@@ -47,8 +46,14 @@ class Settings:
 
         # CORS settings – merge ALLOWED_ORIGINS with FRONTEND_URL so the
         # frontend origin is always permitted even if not listed explicitly.
-        # A wildcard "*" is included to handle the Vite dev-server proxy
-        # and various development environments without certificate issues.
+        #
+        # IMPORTANT: Do NOT add a wildcard "*" to this list.
+        # The CORS middleware uses allow_credentials=False, but mixing
+        # wildcard with explicit origins causes inconsistent
+        # Access-Control-Allow-Origin headers between preflight (OPTIONS)
+        # and actual requests, which browsers reject.
+        # Instead, list every permitted origin explicitly and the
+        # middleware will reflect the matched origin back to the browser.
         raw_origins = os.getenv(
             "ALLOWED_ORIGINS", "http://localhost:3000"
         ).split(",")
@@ -56,10 +61,12 @@ class Settings:
         combined = [o.strip() for o in raw_origins if o.strip()]
         if frontend_url and frontend_url not in combined:
             combined.append(frontend_url)
-        # Always include wildcard to handle proxy and various dev environments
-        if "*" not in combined:
-            combined.append("*")
+        # Ensure common development origins are always allowed
+        for dev_origin in ["http://localhost:3000", "http://localhost:4000"]:
+            if dev_origin not in combined:
+                combined.append(dev_origin)
         self.ALLOWED_ORIGINS = combined
+
         self.ALLOWED_METHODS = os.getenv(
             "ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"
         ).split(",")
