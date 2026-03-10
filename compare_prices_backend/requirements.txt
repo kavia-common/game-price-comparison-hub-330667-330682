@@ -1,5 +1,7 @@
+aiohttp==3.11.18
 annotated-types==0.7.0
 anyio==4.9.0
+beautifulsoup4==4.13.4
 certifi==2025.1.31
 click==8.1.8
 dnspython==2.7.0
@@ -14,6 +16,7 @@ httpx==0.28.1
 idna==3.10
 iniconfig==2.1.0
 Jinja2==3.1.6
+lxml==6.0.2
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 mccabe==0.7.0
