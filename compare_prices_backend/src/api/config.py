@@ -89,6 +89,11 @@ class Settings:
         # This is helpful for debugging environment issues or selector drift
         self.DEBUG_SCRAPER_ERRORS = os.getenv("DEBUG_SCRAPER_ERRORS", "false").lower() == "true"
 
+        # Fallback: When all Playwright scrapers return zero results (e.g. in a sandboxed
+        # environment without internet access), serve mock catalog data so the UI remains
+        # functional.  Set USE_MOCK_FALLBACK=true in .env to enable.
+        self.USE_MOCK_FALLBACK = os.getenv("USE_MOCK_FALLBACK", "false").lower() == "true"
+
 # PUBLIC_INTERFACE
 def get_settings() -> Settings:
     """

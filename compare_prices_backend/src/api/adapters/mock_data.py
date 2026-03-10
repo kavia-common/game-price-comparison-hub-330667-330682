@@ -686,3 +686,116 @@ SUPPORTED_STORES = [
     "Dacby",
     "HG World",
 ]
+
+
+# PUBLIC_INTERFACE
+def mock_search(query: str, category: str = "all"):
+    """
+    Perform a fuzzy search over MOCK_GAME_CATALOG and return matching StoreResult objects.
+
+    Looks for catalog entries whose key is contained in the query or vice-versa
+    (case-insensitive). Returns an empty list when no match is found.
+
+    This function is the single canonical source of mock data for the
+    ComparePricesFlow fallback path in price_service.py.
+
+    CONTRACT:
+        Input:
+            query (str)    - normalised (lower-cased) game title
+            category (str) - "new", "preowned", or "all"
+        Output:
+            List[StoreResult] - may be empty
+        Errors: never raises; logs a warning on unexpected data shape
+        Side effects: none
+
+    Args:
+        query: Normalised (lower-cased, stripped) game title to look for.
+        category: Condition filter — "new", "preowned", or "all".
+
+    Returns:
+        List of StoreResult objects matching the query and category filter.
+    """
+    # Import here to avoid a circular import at module load time.
+    import logging
+    from src.api.models import StoreResult
+
+    _logger = logging.getLogger(__name__)
+
+    # --- Catalog key lookup: find the best matching entry ---------------------
+    normalized_query = query.strip().lower()
+    matched_key: str | None = None
+    for catalog_key in MOCK_GAME_CATALOG:
+        # Accept a match if either string contains the other
+        if catalog_key in normalized_query or normalized_query in catalog_key:
+            matched_key = catalog_key
+            break
+
+    if matched_key is None:
+        _logger.info(
+            "mock_search: no catalog match for query='%s'; returning empty list",
+            query,
+        )
+        return []
+
+    store_entries = MOCK_GAME_CATALOG[matched_key]
+    results = []
+
+    for store_name, data in store_entries.items():
+        try:
+            new_price: float | None = data.get("new_price")
+            preowned_price: float | None = data.get("preowned_price")
+            orig_price: float | None = data.get("original_price")
+            title: str = data.get("title", store_name)
+            url: str = data.get("url", "")
+            image_url: str | None = data.get("image_url")
+            in_stock: bool = bool(data.get("in_stock", True))
+
+            # ---- new condition entry ----------------------------------------
+            if category in ("all", "new") and new_price is not None:
+                discount = None
+                if orig_price and orig_price > new_price:
+                    discount = round((1 - new_price / orig_price) * 100, 1)
+                results.append(
+                    StoreResult(
+                        store_name=store_name,
+                        title=title,
+                        price=new_price,
+                        original_price=orig_price if orig_price and orig_price > new_price else None,
+                        discount_percent=discount,
+                        url=url,
+                        image_url=image_url,
+                        in_stock=in_stock,
+                        condition="new",
+                    )
+                )
+
+            # ---- preowned condition entry ------------------------------------
+            if category in ("all", "preowned") and preowned_price is not None:
+                results.append(
+                    StoreResult(
+                        store_name=store_name,
+                        title=title + " (Pre-Owned)",
+                        price=preowned_price,
+                        original_price=None,
+                        discount_percent=None,
+                        url=url,
+                        image_url=image_url,
+                        in_stock=in_stock,
+                        condition="preowned",
+                    )
+                )
+        except Exception as exc:
+            _logger.warning(
+                "mock_search: error building StoreResult for store='%s' matched_key='%s': %s",
+                store_name,
+                matched_key,
+                exc,
+            )
+
+    _logger.info(
+        "mock_search: matched catalog_key='%s' for query='%s'; returning %d results",
+        matched_key,
+        query,
+        len(results),
+    )
+    return results
