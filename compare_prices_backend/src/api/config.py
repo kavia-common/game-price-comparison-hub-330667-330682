@@ -45,10 +45,16 @@ class Settings:
         self.HOST = os.getenv("HOST", "0.0.0.0")
         self.PORT = int(os.getenv("PORT", "3001"))
 
-        # CORS settings
-        self.ALLOWED_ORIGINS = os.getenv(
+        # CORS settings – merge ALLOWED_ORIGINS with FRONTEND_URL so the
+        # frontend origin is always permitted even if not listed explicitly.
+        raw_origins = os.getenv(
             "ALLOWED_ORIGINS", "http://localhost:3000"
         ).split(",")
+        frontend_url = os.getenv("FRONTEND_URL", "").rstrip("/")
+        combined = [o.strip() for o in raw_origins if o.strip()]
+        if frontend_url and frontend_url not in combined:
+            combined.append(frontend_url)
+        self.ALLOWED_ORIGINS = combined
         self.ALLOWED_METHODS = os.getenv(
             "ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"
         ).split(",")
