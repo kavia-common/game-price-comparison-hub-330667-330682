@@ -2,7 +2,7 @@
 Store scrapers implementation for all 8 Indian game stores, registry-dispatch pattern.
 
 Each store's scraper is a class inheriting from BaseStoreAdapter. All parsing
-and HTTP are done best-effort and robustly, using the shared fetch_page and parse_utils.
+uses Playwright browser-based rendering for robust scraping.
 
 Contract:
   Input: query (str), category (str) as received by /compare-prices
@@ -12,7 +12,7 @@ Error and timeout handling: All scrapers are robust, log warnings on failure, an
 
 To add/store a new scraper, subclass BaseStoreAdapter and register in STORE_SCRAPER_REGISTRY.
 
-All real scraping logic is here, adapters/store_adapter.py is now just orchestration.
+All real scraping logic is here, adapters/store_adapter.py is just orchestration.
 """
 
 import logging
@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from src.api.models import StoreResult
 from src.api.adapters.base_adapter import BaseStoreAdapter
-from src.api.adapters.http_client import fetch_page
+from src.api.adapters.playwright_client import fetch_with_playwright
 from src.api.adapters.parse_utils import extract_price, extract_discount_percent, compute_price_from_mrp_and_discount
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,6 @@ def register_scraper(store_name):
         return cls
     return decorator
 
-
 # ----------- GamesTheShop Scraper --------------
 
 @register_scraper("GamesTheShop")
@@ -48,10 +47,10 @@ class GamesTheShopAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         """
-        Scrape GamesTheShop for the game query.
+        Scrape GamesTheShop for the game query using Playwright-based browser.
         """
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -99,7 +98,6 @@ class GamesTheShopAdapter(BaseStoreAdapter):
                 logger.warning("GamesTheShop parse error: %s", ex)
         return results
 
-
 # ----------- GameNation Scraper --------------
 
 @register_scraper("GameNation")
@@ -110,7 +108,7 @@ class GameNationAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -154,7 +152,6 @@ class GameNationAdapter(BaseStoreAdapter):
                 logger.warning("GameNation parse error: %s", ex)
         return results
 
-
 # ----------- Amazon.in Scraper --------------
 
 @register_scraper("Amazon.in")
@@ -165,7 +162,7 @@ class AmazonIndiaAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
 
@@ -214,7 +211,6 @@ class AmazonIndiaAdapter(BaseStoreAdapter):
                 logger.warning("AmazonIndia parse error: %s", ex)
         return results
 
-
 # ----------- Flipkart Scraper --------------
 
 @register_scraper("Flipkart")
@@ -225,7 +221,7 @@ class FlipkartAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -273,7 +269,7 @@ class McubeGamesAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -327,7 +323,7 @@ class GameShortInAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -381,7 +377,7 @@ class DacbyAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -435,7 +431,7 @@ class HGWorldAdapter(BaseStoreAdapter):
 
     async def search(self, query: str, category: str = "all") -> List[StoreResult]:
         search_url = self.search_template.format(query=query.replace(" ", "+"))
-        html = await fetch_page(search_url, store_name=self.store_name)
+        html = await fetch_with_playwright(search_url, store_name=self.store_name)
         if not html:
             return []
         soup = BeautifulSoup(html, "lxml")
@@ -478,4 +474,3 @@ class HGWorldAdapter(BaseStoreAdapter):
             except Exception as ex:
                 logger.warning("HGWorld parse error: %s", ex)
         return results
-

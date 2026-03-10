@@ -15,7 +15,7 @@ from src.api.models import (
 from src.api.adapters.store_adapter import get_all_store_adapters
 
 # --- Fallback Mock Data Imports ---
-from src.api.adapters.mock_data import MOCK_GAME_CATALOG, SUPPORTED_STORES
+from src.api.adapters.mock_data import MOCK_GAME_CATALOG
 
 logger = logging.getLogger(__name__)
 
@@ -125,40 +125,8 @@ async def compare_prices(query: str, category: str = "all") -> ComparePricesResp
         if isinstance(result, list):
             all_results.extend(result)
 
-    # --- Fallback: If no actual store results, but query matches mock catalog, use mock data ---
-    if not all_results and normalized_query in MOCK_GAME_CATALOG:
-        logger.info("PriceHuntFlow: FALLBACK activated for query='%s' (mock data used)", normalized_query)
-        mock_results: List[StoreResult] = []
-        catalog = MOCK_GAME_CATALOG[normalized_query]
-        for store in SUPPORTED_STORES:
-            item = catalog.get(store)
-            if item:
-                # Respect category and create separate StoreResult for new/preowned
-                if category in ("all", "new") and item.get("new_price") is not None:
-                    mock_results.append(StoreResult(
-                        store_name=store,
-                        title=item.get("title", normalized_query),
-                        price=item.get("new_price"),
-                        original_price=item.get("original_price"),
-                        discount_percent=None,
-                        url=item.get("url"),
-                        image_url=item.get("image_url"),
-                        in_stock=item.get("in_stock", True),
-                        condition="new"
-                    ))
-                if category in ("all", "preowned") and item.get("preowned_price") is not None:
-                    mock_results.append(StoreResult(
-                        store_name=store,
-                        title=item.get("title", normalized_query) + " (Pre-Owned)",
-                        price=item.get("preowned_price"),
-                        original_price=item.get("original_price"),
-                        discount_percent=None,
-                        url=item.get("url"),
-                        image_url=item.get("image_url"),
-                        in_stock=item.get("in_stock", True),
-                        condition="preowned"
-                    ))
-        all_results = mock_results
+    # --- Fallback is disabled: No mock data, always return live results only ---
+    # If no actual store results, always return empty results, enforcing real scraping mode.
 
     # Separate results by condition for stats
     new_results = [r for r in all_results if r.condition == "new"]
