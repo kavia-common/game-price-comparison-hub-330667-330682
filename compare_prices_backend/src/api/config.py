@@ -113,8 +113,11 @@ class Settings:
         # OLLAMA_ENABLED: Master switch - set to "true" to enable LLM
         #   extraction fallback
         # OLLAMA_TIMEOUT: Request timeout in seconds for Ollama API calls
+        # OLLAMA_BASE_URL: points to the ollama-service container.
+        # Default assumes ollama-service runs on the same host.
+        # Trailing slash is stripped for consistent URL construction.
         self.OLLAMA_BASE_URL = os.getenv(
-            "OLLAMA_BASE_URL", "http://localhost:11434/"
+            "OLLAMA_BASE_URL", "http://localhost:11434"
         ).rstrip("/")
         self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
         self.OLLAMA_ENABLED = (
