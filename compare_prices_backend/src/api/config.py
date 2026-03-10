@@ -30,6 +30,10 @@ class Settings:
         REQUEST_TIMEOUT_MS: Request timeout in milliseconds
         FIRECRAWL_API_KEY: API key for Firecrawl service
         FIRECRAWL_ENABLED: Whether to use Firecrawl for real scraping
+        OLLAMA_BASE_URL: Base URL of the Ollama REST API
+        OLLAMA_MODEL: Model name to use for LLM extraction
+        OLLAMA_ENABLED: Whether LLM-based extraction is enabled
+        OLLAMA_TIMEOUT: Timeout in seconds for Ollama API calls
     """
 
     def __init__(self):
@@ -44,7 +48,7 @@ class Settings:
         self.HOST = os.getenv("HOST", "0.0.0.0")
         self.PORT = int(os.getenv("PORT", "3001"))
 
-        # CORS settings – merge ALLOWED_ORIGINS with FRONTEND_URL so the
+        # CORS settings - merge ALLOWED_ORIGINS with FRONTEND_URL so the
         # frontend origin is always permitted even if not listed explicitly.
         #
         # IMPORTANT: Do NOT add a wildcard "*" to this list.
@@ -71,7 +75,8 @@ class Settings:
             "ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"
         ).split(",")
         self.ALLOWED_HEADERS = os.getenv(
-            "ALLOWED_HEADERS", "Content-Type,Authorization,X-Requested-With,Accept,Accept-Language,Content-Language"
+            "ALLOWED_HEADERS",
+            "Content-Type,Authorization,X-Requested-With,Accept,Accept-Language,Content-Language"
         ).split(",")
         self.CORS_MAX_AGE = int(os.getenv("CORS_MAX_AGE", "3600"))
 
@@ -83,16 +88,40 @@ class Settings:
         # Firecrawl settings (for future real scraping integration)
         # Set FIRECRAWL_API_KEY env var to enable real store scraping
         self.FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "")
-        self.FIRECRAWL_ENABLED = os.getenv("FIRECRAWL_ENABLED", "false").lower() == "true"
+        self.FIRECRAWL_ENABLED = (
+            os.getenv("FIRECRAWL_ENABLED", "false").lower() == "true"
+        )
 
-        # Debug: Show scraping errors directly in API response for all stores if enabled
-        # This is helpful for debugging environment issues or selector drift
-        self.DEBUG_SCRAPER_ERRORS = os.getenv("DEBUG_SCRAPER_ERRORS", "false").lower() == "true"
+        # Debug: Show scraping errors directly in API response for all stores
+        # if enabled. Helpful for debugging environment issues or selector drift
+        self.DEBUG_SCRAPER_ERRORS = (
+            os.getenv("DEBUG_SCRAPER_ERRORS", "false").lower() == "true"
+        )
 
-        # Fallback: When all Playwright scrapers return zero results (e.g. in a sandboxed
-        # environment without internet access), serve mock catalog data so the UI remains
-        # functional.  Set USE_MOCK_FALLBACK=true in .env to enable.
-        self.USE_MOCK_FALLBACK = os.getenv("USE_MOCK_FALLBACK", "false").lower() == "true"
+        # Fallback: When all Playwright scrapers return zero results (e.g. in
+        # a sandboxed environment without internet access), serve mock catalog
+        # data so the UI remains functional.
+        # Set USE_MOCK_FALLBACK=true in .env to enable.
+        self.USE_MOCK_FALLBACK = (
+            os.getenv("USE_MOCK_FALLBACK", "false").lower() == "true"
+        )
+
+        # Ollama LLM service settings for intelligent HTML extraction.
+        # OLLAMA_BASE_URL: Base URL of the Ollama REST API
+        #   (e.g. http://localhost:11434/)
+        # OLLAMA_MODEL: Model name to use for extraction (e.g. llama3.2)
+        # OLLAMA_ENABLED: Master switch - set to "true" to enable LLM
+        #   extraction fallback
+        # OLLAMA_TIMEOUT: Request timeout in seconds for Ollama API calls
+        self.OLLAMA_BASE_URL = os.getenv(
+            "OLLAMA_BASE_URL", "http://localhost:11434/"
+        ).rstrip("/")
+        self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+        self.OLLAMA_ENABLED = (
+            os.getenv("OLLAMA_ENABLED", "false").lower() == "true"
+        )
+        self.OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "60"))
+
 
 # PUBLIC_INTERFACE
 def get_settings() -> Settings:

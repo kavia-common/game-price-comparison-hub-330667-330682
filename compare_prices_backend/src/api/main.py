@@ -112,20 +112,34 @@ def health_check():
     summary="Detailed Health Check",
     description="Returns detailed health status including Firecrawl readiness.",
 )
-def detailed_health_check():
+async def detailed_health_check():
     """
     Detailed health check endpoint.
 
     Returns health status along with configuration details
-    such as Firecrawl integration status.
+    such as Firecrawl and Ollama integration status.
 
     Returns:
         HealthResponse: Detailed service health status
     """
     firecrawl_status = "enabled" if settings.FIRECRAWL_ENABLED else "mock_mode"
+
+    # Check Ollama availability when enabled
+    ollama_status = "disabled"
+    if getattr(settings, "OLLAMA_ENABLED", False):
+        try:
+            from src.api.services.ollama_client import check_ollama_health
+            is_healthy = await check_ollama_health()
+            ollama_status = "connected" if is_healthy else "unreachable"
+        except Exception:
+            ollama_status = "error"
+
     return HealthResponse(
         status="ok",
-        message=f"PriceHunt API is running (scraping: {firecrawl_status})",
+        message=(
+            f"PriceHunt API is running "
+            f"(scraping: {firecrawl_status}, ollama: {ollama_status})"
+        ),
         version=settings.APP_VERSION,
     )
 
