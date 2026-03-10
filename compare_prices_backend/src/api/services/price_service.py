@@ -64,23 +64,43 @@ def compute_price_stats(results: List[StoreResult]) -> PriceStats:
 async def compare_prices(query: str, category: str = "all") -> ComparePricesResponse:
     """
     Main price comparison function.
-    
+
+    Normalizes the search query before querying all adapters to ensure
+    consistent and robust handling across mock data, adapters, and title
+    matching.
+
     Queries all 8 store adapters concurrently, collects results,
     computes statistics for both new and preowned categories,
     and returns a structured response.
-    
-    Args:
-        query: Game title to search for
-        category: Filter - 'new', 'preowned', or 'all'
-        
-    Returns:
+
+    Inputs:
+        query (str): Game title to search for (raw user-provided string)
+        category (str): Filter - 'new', 'preowned', or 'all'
+
+    Outputs:
         ComparePricesResponse with results and statistics
+
+    Errors:
+        - Logs and skips unresponsive adapters
+        - Returns empty results/stats on catastrophic failure
+
+    Invariants:
+        - Query is normalized before adapter invocation
+
+    Observability:
+        - Logs original and normalized queries at the start
+
     """
     adapters = get_all_store_adapters()
     all_results: List[StoreResult] = []
 
+    # Query normalization step (single-control-point, reuse-protective)
+    normalized_query = query.strip().lower()
+    logger.info("Starting price comparison: original_query='%s', normalized_query='%s', category='%s'",
+                query, normalized_query, category)
+
     # Query all stores concurrently for performance
-    tasks = [adapter.search(query, category) for adapter in adapters]
+    tasks = [adapter.search(normalized_query, category) for adapter in adapters]
 
     try:
         store_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -108,6 +128,7 @@ async def compare_prices(query: str, category: str = "all") -> ComparePricesResp
     new_stats = compute_price_stats(new_results)
     preowned_stats = compute_price_stats(preowned_results)
 
+    # Return the original query for contract and frontend display
     return ComparePricesResponse(
         query=query,
         category=category,
