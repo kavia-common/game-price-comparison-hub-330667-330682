@@ -31,7 +31,12 @@ from src.api.adapters.base_adapter import BaseStoreAdapter
 from src.api.adapters.playwright_client import fetch_with_playwright
 from src.api.adapters.parse_utils import extract_price, extract_discount_percent, compute_price_from_mrp_and_discount
 
+from src.api.config import get_settings
+
 logger = logging.getLogger(__name__)
+
+_SETTINGS = get_settings()
+DEBUG_SCRAPER_ERRORS = getattr(_SETTINGS, "DEBUG_SCRAPER_ERRORS", False)
 
 # ------------ Store Scraper Registry --------------
 
@@ -67,6 +72,19 @@ class GamesTheShopAdapter(BaseStoreAdapter):
         if not product_items:
             logger.warning("GamesTheShopAdapter: No products found for query='%s' url=%s; HTML length=%d. HTML excerpt:\n%s",
                 query, search_url, len(html), html[:1000] if html else "None")
+            if DEBUG_SCRAPER_ERRORS:
+                # Help devs see this scraping failure directly in the API response for troubleshooting
+                results.append(StoreResult(
+                    store_name=self.store_name,
+                    title="[DEBUG: No products found] Selector: ul.product-list > li",
+                    price=None,
+                    original_price=None,
+                    discount_percent=None,
+                    url=search_url,
+                    image_url=None,
+                    in_stock=False,
+                    condition="new"
+                ))
         # NOTE: If store HTML has changed (no 'ul.product-list > li'), update selectors here:
         for prod_li in product_items:
             try:
@@ -125,7 +143,20 @@ class GameNationAdapter(BaseStoreAdapter):
             return []
         soup = BeautifulSoup(html, "lxml")
         results = []
-        for card in soup.select("div.product-card"):
+        cards = soup.select("div.product-card")
+        if not cards and DEBUG_SCRAPER_ERRORS:
+            results.append(StoreResult(
+                store_name=self.store_name,
+                title="[DEBUG: No products found] Selector: div.product-card",
+                price=None,
+                original_price=None,
+                discount_percent=None,
+                url=search_url,
+                image_url=None,
+                in_stock=False,
+                condition="new"
+            ))
+        for card in cards:
             try:
                 title = card.select_one(".product-title").get_text(strip=True)
                 url = self.base_url + card.select_one("a")["href"]

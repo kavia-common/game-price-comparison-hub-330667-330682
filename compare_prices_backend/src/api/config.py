@@ -85,6 +85,9 @@ class Settings:
         self.FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "")
         self.FIRECRAWL_ENABLED = os.getenv("FIRECRAWL_ENABLED", "false").lower() == "true"
 
+        # Debug: Show scraping errors directly in API response for all stores if enabled
+        # This is helpful for debugging environment issues or selector drift
+        self.DEBUG_SCRAPER_ERRORS = os.getenv("DEBUG_SCRAPER_ERRORS", "false").lower() == "true"
 
 # PUBLIC_INTERFACE
 def get_settings() -> Settings:
