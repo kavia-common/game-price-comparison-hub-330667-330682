@@ -71,7 +71,7 @@ class Settings:
             "ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"
         ).split(",")
         self.ALLOWED_HEADERS = os.getenv(
-            "ALLOWED_HEADERS", "Content-Type,Authorization,X-Requested-With"
+            "ALLOWED_HEADERS", "Content-Type,Authorization,X-Requested-With,Accept,Accept-Language,Content-Language"
         ).split(",")
         self.CORS_MAX_AGE = int(os.getenv("CORS_MAX_AGE", "3600"))
 

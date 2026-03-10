@@ -111,21 +111,55 @@ class MockStoreAdapter(BaseStoreAdapter):
 
         return results
 
+    # Common abbreviation / alias mapping for popular game searches.
+    # Keys are lowercased abbreviations; values are substrings that
+    # appear in the canonical mock-catalog keys.
+    _ALIASES = {
+        "gta": "gta",
+        "gow": "god of war",
+        "rdr": "red dead redemption",
+        "rdr2": "red dead redemption 2",
+        "tlou": "the last of us",
+        "sm2": "spider-man 2",
+        "spiderman": "spider-man",
+        "cp2077": "cyberpunk 2077",
+        "cp77": "cyberpunk 2077",
+    }
+
     def _matches_query(self, query: str, game_key: str) -> bool:
         """
         Check if a search query matches a game catalog key.
-        Uses simple substring matching for mock data.
-        
+
+        Matching strategy (any of the following counts as a match):
+          1. The full query is contained in the game key.
+          2. The game key is contained in the query.
+          3. All individual query terms appear in the game key.
+          4. The query matches a known alias that maps to the game key.
+
         Args:
             query: Normalized search query
             game_key: Game key from the mock catalog
-            
+
         Returns:
             True if the query matches the game key
         """
-        # Split query into terms and check if all terms appear in the game key
+        # Direct substring checks (most common case)
+        if query in game_key or game_key in query:
+            return True
+
+        # Term-based: all query words appear somewhere in the game key
         query_terms = query.split()
-        return all(term in game_key for term in query_terms)
+        if query_terms and all(term in game_key for term in query_terms):
+            return True
+
+        # Alias lookup: if the full query or any single term is a known
+        # abbreviation, check whether the expanded form matches the key.
+        for term in [query] + query_terms:
+            expanded = self._ALIASES.get(term)
+            if expanded and (expanded in game_key or game_key in expanded):
+                return True
+
+        return False
 
 
 # PUBLIC_INTERFACE
